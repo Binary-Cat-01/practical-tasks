@@ -2,6 +2,9 @@ package com.walking.lesson39_queue1.task3;
 
 import com.walking.lesson39_queue1.task3.structure.LinkedList;
 
+import javax.swing.*;
+import java.util.Iterator;
+
 /**
  * Реализуйте двусвязный список.
  * Реализуйте метод, разворачивающий список.
@@ -47,7 +50,13 @@ public class Main {
 
         System.out.println(integers);
 
-        integers.deleteAllWithEvenHash();
+        Iterator<Integer> iterator = integers.iterator();
+
+        while (iterator.hasNext()) {
+            if (iterator.next().hashCode() % 2 == 0) {
+                iterator.remove();
+            }
+        }
 
         System.out.println(integers);
     }

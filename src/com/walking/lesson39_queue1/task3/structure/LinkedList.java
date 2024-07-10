@@ -2,12 +2,13 @@ package com.walking.lesson39_queue1.task3.structure;
 
 import com.walking.lesson39_queue1.task3.exception.ElementNotFoundException;
 
-import java.util.StringJoiner;
+import java.util.*;
 
-public class LinkedList<E> {
+public class LinkedList<E> implements Iterable<E> {
     private Node<E> first;
     private Node<E> last;
     private int size;
+    private int modificationCounter;
 
     public LinkedList() {
     }
@@ -15,7 +16,6 @@ public class LinkedList<E> {
     public LinkedList(E element) {
         this.first = new Node<>(element);
         this.last = first;
-        this.size = 0;
     }
 
     public boolean isEmpty() {
@@ -39,27 +39,33 @@ public class LinkedList<E> {
     }
 
     public void addFirst(E element) {
-        first = new Node<E>(element, first, null);
+        Node<E> oldFirst = first;
+
+        first = new Node<E>(element, oldFirst, null);
 
         if (first.isLast()) {
             last = first;
         } else {
-            first.next.previous = first;
+            oldFirst.previous = first;
         }
 
         size++;
+        modificationCounter++;
     }
 
     public void addLast(E element) {
-        last = new Node<E>(element, null, last);
+        Node<E> oldLast = last;
+
+        last = new Node<E>(element, null, oldLast);
 
         if (last.isFirst()) {
             first = last;
         } else {
-            last.previous.next = last;
+            oldLast.next = last;
         }
 
         size++;
+        modificationCounter++;
     }
 
     public E removeFirst() {
@@ -68,7 +74,8 @@ public class LinkedList<E> {
         }
 
         E result = getFirst();
-        delete(first);
+        deleteNode(first);
+        modificationCounter++;
 
         return result;
     }
@@ -79,47 +86,32 @@ public class LinkedList<E> {
         }
 
         E result = getLast();
-        delete(last);
+        deleteNode(last);
+        modificationCounter++;
 
         return result;
     }
 
     public void reverse() {
-        if (isReversible()) {
-            Node<E> current = first;
-
-            while (current != null) {
-                current.swapNextAndPrevious();
-                current = current.previous;
-            }
-
-            swapFistAndLast();
+        if (size < 2) {
+            return;
         }
-    }
 
-    public void deleteAllWithEvenHash() {
         Node<E> current = first;
 
         while (current != null) {
-            if (current.hasEvenHash()) {
-                delete(current);
-            }
-
-            current = current.next;
+            current.swapNextAndPrevious();
+            current = current.previous;
         }
-    }
 
-    private boolean isReversible() {
-        return size > 1;
-    }
-
-    private void swapFistAndLast() {
         Node<E> temp = first;
         first = last;
         last = temp;
+
+        modificationCounter++;
     }
 
-    private void delete(Node<E> current) {
+    public void deleteNode(Node<E> current) {
         if (current.isFirst()) {
             first = first.next;
         } else {
@@ -133,6 +125,11 @@ public class LinkedList<E> {
         }
 
         size--;
+        modificationCounter++;
+    }
+
+    public Iterator<E> iterator() {
+        return new LinkedListIterator<E>(this);
     }
 
     @Override
@@ -171,14 +168,66 @@ public class LinkedList<E> {
             return next == null;
         }
 
-        private boolean hasEvenHash() {
-            return value.hashCode() % 2 == 0;
-        }
-
         private void swapNextAndPrevious() {
             Node<E> temp = next;
             next = previous;
             previous = temp;
+        }
+    }
+
+    private static class LinkedListIterator<E> implements Iterator<E> {
+        private final LinkedList<E> linkedList;
+        private boolean canBeRemoved = false;
+        private int modificationCounter;
+        private Node<E> current;
+        private Node<E> previous;
+
+        public LinkedListIterator(LinkedList<E> linkedList) {
+            this.linkedList = linkedList;
+            current = linkedList.first;
+            this.modificationCounter = linkedList.modificationCounter;
+        }
+
+        @Override
+        public boolean hasNext() {
+            checkConcurrentModification();
+
+            return current != null;
+        }
+
+        @Override
+        public E next() {
+            checkConcurrentModification();
+
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+
+            previous = current;
+            current = current.next;
+            canBeRemoved = true;
+
+            return previous.value;
+        }
+
+        @Override
+        public void remove() {
+            checkConcurrentModification();
+
+            if (!canBeRemoved) {
+                throw new IllegalStateException();
+            }
+
+            linkedList.deleteNode(previous);
+            modificationCounter++;
+
+            canBeRemoved = false;
+        }
+
+        private void checkConcurrentModification() {
+            if (modificationCounter != linkedList.modificationCounter) {
+                throw new ConcurrentModificationException();
+            }
         }
     }
 }
