@@ -4,9 +4,10 @@ import com.walking.lesson39_queue1.task1.exception.ElementNotFoundException;
 
 import java.util.*;
 
-public class LinkedList<E> {
+public class LinkedList<E> implements Iterable<E> {
     private Node<E> top;
     private int size;
+    private int modificationCounter;
 
     public LinkedList() {
     }
@@ -17,10 +18,6 @@ public class LinkedList<E> {
     }
 
     public E getTop() {
-        if (size == 0) {
-            throw new ElementNotFoundException();
-        }
-
         return top.value;
     }
 
@@ -31,42 +28,33 @@ public class LinkedList<E> {
     public boolean add(E element) {
         top = new Node<>(element, top);
         size++;
+        modificationCounter++;
 
         return true;
     }
 
     public void delete(Object object) {
-        if (top != null) {
-            if (Objects.equals(object, top.value)) {
-                top = top.next;
-                size--;
-
-                return;
-            }
-
-            Node<E> current = top;
-
-            while (current.next != null) {
-                if (Objects.equals(current.next.value, object)) {
-                    current.next = current.next.next;
-                    size--;
-
-                    return;
-                }
-
-                current = current.next;
-            }
+        if (top == null) {
+            throw new ElementNotFoundException();
         }
 
-        throw new ElementNotFoundException();
-    }
+        if (Objects.equals(object, top.value)) {
+            top = top.next;
+            size--;
+            modificationCounter++;
 
-    public void deleteAllWithEvenHash() {
+            return;
+        }
+
         Node<E> current = top;
 
-        while (current != null) {
-            if (current.hasEvenHash()) {
-                delete(current.value);
+        while (current.next != null) {
+            if (Objects.equals(current.next.value, object)) {
+                current.next = current.next.next;
+                size--;
+                modificationCounter++;
+
+                return;
             }
 
             current = current.next;
@@ -74,37 +62,43 @@ public class LinkedList<E> {
     }
 
     public void reverse() {
-        if (isReversible()) {
-            Node<E> nextTop = null;
-            Node<E> previousTop = null;
-
-            while (top.next != null) {
-                nextTop = top.next;
-                top.next = previousTop;
-                previousTop = top;
-                top = nextTop;
-            }
-
-            top.next = previousTop;
+        if (size < 2) {
+            return;
         }
+
+        Node<E> nextTop = null;
+        Node<E> previousTop = null;
+
+        while (top.next != null) {
+            nextTop = top.next;
+            top.next = previousTop;
+            previousTop = top;
+            top = nextTop;
+        }
+
+        top.next = previousTop;
+        modificationCounter++;
     }
 
     public void alternativeReverse() {
-        if (isReversible()) {
-            LinkedList<E> reversed = new LinkedList<>();
-
-            while (top != null) {
-                reversed.add(top.value);
-                delete(top.value);
-            }
-
-            top = reversed.top;
-            size = reversed.size;
+        if (size < 2) {
+            return;
         }
+
+        LinkedList<E> reversed = new LinkedList<>();
+
+        while (top != null) {
+            reversed.add(top.value);
+            delete(top.value);
+        }
+
+        top = reversed.top;
+        size = reversed.size;
+        modificationCounter++;
     }
 
-    private boolean isReversible() {
-        return size > 1;
+    public Iterator<E> iterator() {
+        return new LinkedListIterator<>(this);
     }
 
     @Override
@@ -133,9 +127,61 @@ public class LinkedList<E> {
             this.value = value;
             this.next = next;
         }
+    }
 
-        private boolean hasEvenHash() {
-            return value.hashCode() % 2 == 0;
+    private static class LinkedListIterator<E> implements Iterator<E> {
+        private final LinkedList<E> linkedList;
+        private boolean canBeRemoved = false;
+        private int modificationCounter;
+        private Node<E> current;
+        private Node<E> previous;
+
+        public LinkedListIterator(LinkedList<E> linkedList) {
+            this.linkedList = linkedList;
+            current = linkedList.top;
+            this.modificationCounter = linkedList.modificationCounter;
+        }
+
+        @Override
+        public boolean hasNext() {
+            checkConcurrentModification();
+
+            return current != null;
+        }
+
+        @Override
+        public E next() {
+            checkConcurrentModification();
+
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+
+            previous = current;
+            current = current.next;
+            canBeRemoved = true;
+
+            return previous.value;
+        }
+
+        @Override
+        public void remove() {
+            checkConcurrentModification();
+
+            if (!canBeRemoved) {
+                throw new IllegalStateException();
+            }
+
+            linkedList.delete(previous.value);
+            modificationCounter++;
+
+            canBeRemoved = false;
+        }
+
+        private void checkConcurrentModification() {
+            if (modificationCounter != linkedList.modificationCounter) {
+                throw new ConcurrentModificationException();
+            }
         }
     }
 }

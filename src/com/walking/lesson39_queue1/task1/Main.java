@@ -2,6 +2,8 @@ package com.walking.lesson39_queue1.task1;
 
 import com.walking.lesson39_queue1.task1.structure.LinkedList;
 
+import java.util.Iterator;
+
 /**
  * Реализуйте односвязный список (можно использовать реализацию в рамках
  * <a href="https://github.com/KFalcon2022/practical-tasks/blob/master/src/com/walking/lesson28_generics1/task4/structure/Stack.java">...</a>).
@@ -14,8 +16,6 @@ import com.walking.lesson39_queue1.task1.structure.LinkedList;
 public class Main {
     public static void main(String[] args) {
         LinkedList<Integer> integers = new LinkedList<>();
-
-        integers.reverse();
 
         integers.add(1);
         integers.add(2);
@@ -36,7 +36,18 @@ public class Main {
         integers.add(2);
         System.out.println("Список после добавления элементов:\n" + integers);
 
-        integers.deleteAllWithEvenHash();
+        deleteElementsWithEvenHash(integers);
         System.out.println("Удалили элементы с четными хеш-кодами:\n" + integers);
+    }
+
+    public static void deleteElementsWithEvenHash(LinkedList<?> linkedList) {
+        Iterator<?> iterator = linkedList.iterator();
+
+        while (iterator.hasNext()) {
+            if (iterator.next()
+                        .hashCode() % 2 == 0) {
+                iterator.remove();
+            }
+        }
     }
 }
