@@ -16,91 +16,101 @@ public class TaskService {
         this.logger = new Logger();
     }
 
-    public TaskService(Collection<? extends Task> incomingTasks) {
-        this.tasks = new TreeSet<>(incomingTasks);
+    public TaskService(Collection<? extends Task> collection) {
         this.logger = new Logger();
 
-        for (Task incomingTask : incomingTasks) {
-            logger.log(getTaskStatusMessage(incomingTask, TaskStatus.ACCEPTED));
-        }
-    }
-
-    public List<Task> getAllTasks() {
-        return List.copyOf(tasks);
-    }
-
-    public boolean acceptSingleTask(Task acceptedTask) {
-        if (tasks.add(acceptedTask)) {
-            acceptedTask.setAcceptedAt(Instant.now());
-            logger.log(getTaskStatusMessage(acceptedTask, TaskStatus.ACCEPTED));
-
-            return true;
+        for (Task task : collection) {
+            task.setAcceptedAt(Instant.now());
+            logger.log(getTaskStatusMessage(task, TaskStatus.ACCEPTED));
         }
 
-        return false;
+        this.tasks = new TreeSet<>(collection);
     }
 
-    public boolean acceptAllTasks(Collection<? extends Task> incomingTasks) {
-        if (tasks.addAll(incomingTasks)) {
-            for (Task acceptedTask : incomingTasks) {
-                acceptedTask.setAcceptedAt(Instant.now());
-                logger.log(getTaskStatusMessage(acceptedTask, TaskStatus.ACCEPTED));
-            }
-
-            return true;
-        }
-
-        return false;
+    public int size() {
+        return tasks.size();
     }
 
-    public Task executeSingleTask() {
-        Task executedTask = tasks.pollFirst();
-
-        if (executedTask != null) {
-            logger.log(getTaskStatusMessage(executedTask, TaskStatus.EXECUTED));
-            executedTask.setAcceptedAt(null);
-        }
-
-        return executedTask;
-    }
-
-    public List<Task> executeMultipleTasks(int taskCount) {
-        List<Task> executedTasks = new ArrayList<>();
-
-        for (int i = 0; i < taskCount; i++) {
-            executedTasks.add(executeSingleTask());
-        }
-
-        return executedTasks;
-    }
-
-    public Task cancelNextTask() {
-        Task canceledTask = tasks.pollFirst();
-
-        if (canceledTask != null) {
-            logger.log(getTaskStatusMessage(canceledTask, TaskStatus.CANCELED));
-            canceledTask.setAcceptedAt(null);
-        }
-
-        return canceledTask;
-    }
-
-    public List<Task> cancelMultipleTasks(int taskCount) {
-        List<Task> canceledTasks = new ArrayList<>();
-
-        for (int i = 0; i < taskCount; i++) {
-            canceledTasks.add(cancelNextTask());
-        }
-
-        return canceledTasks;
-    }
-
-    public Task lookNextTask() {
+    public Task getNext() {
         return tasks.isEmpty() ? null : tasks.first();
     }
 
-    public boolean haveTask() {
+    public boolean hasNext() {
         return !tasks.isEmpty();
+    }
+
+    public List<Task> getAll() {
+        return List.copyOf(tasks);
+    }
+
+    public boolean accept(Task task) {
+        task.setAcceptedAt(Instant.now());
+
+        if (tasks.add(task)) {
+            logger.log(getTaskStatusMessage(task, TaskStatus.ACCEPTED));
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean acceptMany(Collection<? extends Task> collection) {
+        for (Task task : collection) {
+            accept(task);
+        }
+
+        return true;
+    }
+
+    public Task executeNext() {
+        Task polled = tasks.pollFirst();
+
+        if (polled != null) {
+            logger.log(getTaskStatusMessage(polled, TaskStatus.EXECUTED));
+            polled.setAcceptedAt(null);
+        }
+
+        return polled;
+    }
+
+    public List<Task> executeMany(int count) {
+        if (count > size()) {
+            count = size();
+        }
+
+        List<Task> taskList = new ArrayList<>();
+
+        for (int i = 0; i < count; i++) {
+            taskList.add(executeNext());
+        }
+
+        return taskList;
+    }
+
+    public Task cancelNext() {
+        Task polled = tasks.pollFirst();
+
+        if (polled != null) {
+            logger.log(getTaskStatusMessage(polled, TaskStatus.CANCELED));
+            polled.setAcceptedAt(null);
+        }
+
+        return polled;
+    }
+
+    public List<Task> cancelMany(int count) {
+        if (count > size()) {
+            count = size();
+        }
+
+        List<Task> taskList = new ArrayList<>();
+
+        for (int i = 0; i < count; i++) {
+            taskList.add(cancelNext());
+        }
+
+        return taskList;
     }
 
     private String getTaskStatusMessage(Task task, TaskStatus status) {

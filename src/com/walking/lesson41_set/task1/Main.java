@@ -1,7 +1,7 @@
 package com.walking.lesson41_set.task1;
 
-import com.walking.lesson40_queue2.model.Task;
-import com.walking.lesson40_queue2.service.TaskService;
+import com.walking.lesson41_set.task1.model.Task;
+import com.walking.lesson41_set.task1.service.TaskService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,30 +15,30 @@ import java.util.List;
  */
 public class Main {
     public static void main(String[] args) {
-        TaskService taskService = new TaskService(getTaskList());
+        TaskService taskService = new TaskService(initTasks());
 
-        taskService.acceptSingleTask(new Task("Fourth"));
-        taskService.executeSingleTask();
+        taskService.accept(new Task("Fourth"));
+        taskService.executeNext();
 
-        if (taskService.haveTask()) {
-            taskService.cancelNextTask();
+        if (taskService.hasNext()) {
+            taskService.cancelNext();
         }
 
-        taskService.executeMultipleTasks(2);
-        taskService.acceptAllTasks(getTaskList());
+        taskService.executeMany(2);
+        taskService.acceptMany(initTasks());
 
-        List<Task> canceledTasks = taskService.cancelMultipleTasks(2);
+        List<Task> canceledTasks = taskService.cancelMany(2);
         System.out.println("Canceled tasks:");
 
         for (Task canceledTask : canceledTasks) {
             System.out.println(canceledTask.getName());
         }
 
-        Task nextTask = taskService.lookNextTask();
+        Task nextTask = taskService.getNext();
         System.out.println("Next task: " + nextTask.getName());
     }
 
-    public static List<Task> getTaskList() {
+    public static List<Task> initTasks() {
         List<Task> tasks = new ArrayList<>();
 
         tasks.add(new Task("First"));
