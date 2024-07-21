@@ -15,32 +15,44 @@ public class TaskService {
         this.logger = new Logger();
     }
 
-    public TaskService(Collection<? extends Task> incomingTasks) {
-        this.tasks = new ArrayDeque<>(incomingTasks);
+    public TaskService(Collection<? extends Task> collection) {
+        this.tasks = new ArrayDeque<>(collection);
         this.logger = new Logger();
 
-        for (Task incomingTask : incomingTasks) {
-            logger.log(getTaskStatusMessage(incomingTask, TaskStatus.ACCEPTED));
+        for (Task task : collection) {
+            logger.log(getTaskStatusMessage(task, TaskStatus.ACCEPTED));
         }
     }
 
-    public List<Task> getAllTasks() {
+    public int size() {
+        return tasks.size();
+    }
+
+    public List<Task> getAll() {
         return List.copyOf(tasks);
     }
 
-    public boolean acceptSingleTask(Task acceptedTask) {
-        if (tasks.offer(acceptedTask)) {
-            logger.log(getTaskStatusMessage(acceptedTask, TaskStatus.ACCEPTED));
+    public Task getNext() {
+        return tasks.peek();
+    }
+
+    public boolean hasNext() {
+        return tasks.peek() != null;
+    }
+
+    public boolean accept(Task task) {
+        if (tasks.offer(task)) {
+            logger.log(getTaskStatusMessage(task, TaskStatus.ACCEPTED));
             return true;
         }
 
         return false;
     }
 
-    public boolean acceptAllTasks(Collection<? extends Task> incomingTasks) {
-        if (tasks.addAll(incomingTasks)) {
-            for (Task acceptedTask : incomingTasks) {
-                logger.log(getTaskStatusMessage(acceptedTask, TaskStatus.ACCEPTED));
+    public boolean acceptMany(Collection<? extends Task> collection) {
+        if (this.tasks.addAll(collection)) {
+            for (Task task : collection) {
+                logger.log(getTaskStatusMessage(task, TaskStatus.ACCEPTED));
             }
 
             return true;
@@ -49,52 +61,52 @@ public class TaskService {
         return false;
     }
 
-    public Task executeSingleTask() {
-        Task executedTask = tasks.poll();
+    public Task executeNext() {
+        Task polled = tasks.poll();
 
-        if (executedTask != null) {
-            logger.log(getTaskStatusMessage(executedTask, TaskStatus.EXECUTED));
+        if (polled != null) {
+            logger.log(getTaskStatusMessage(polled, TaskStatus.EXECUTED));
         }
 
-        return executedTask;
+        return polled;
     }
 
-    public List<Task> executeMultipleTasks(int taskCount) {
-        List<Task> executedTasks = new ArrayList<>();
-
-        for (int i = 0; i < taskCount; i++) {
-            executedTasks.add(executeSingleTask());
+    public List<Task> executeMany(int count) {
+        if (count > size()) {
+            count = size();
         }
 
-        return executedTasks;
-    }
+        List<Task> taskList = new ArrayList<>(count);
 
-    public Task cancelNextTask() {
-        Task canceledTask = tasks.poll();
-
-        if (canceledTask != null) {
-            logger.log(getTaskStatusMessage(canceledTask, TaskStatus.CANCELED));
+        for (int i = 0; i < count; i++) {
+            taskList.add(executeNext());
         }
 
-        return canceledTask;
+        return taskList;
     }
 
-    public List<Task> cancelMultipleTasks(int taskCount) {
-        List<Task> canceledTasks = new ArrayList<>();
+    public Task cancelNext() {
+        Task polled = tasks.poll();
 
-        for (int i = 0; i < taskCount; i++) {
-            canceledTasks.add(cancelNextTask());
+        if (polled != null) {
+            logger.log(getTaskStatusMessage(polled, TaskStatus.CANCELED));
         }
 
-        return canceledTasks;
+        return polled;
     }
 
-    public Task lookNextTask() {
-        return tasks.peek();
-    }
+    public List<Task> cancelMany(int count) {
+        if (count > size()) {
+            count = size();
+        }
 
-    public boolean haveTask() {
-        return tasks.peek() != null;
+        List<Task> taskList = new ArrayList<>(count);
+
+        for (int i = 0; i < count; i++) {
+            taskList.add(cancelNext());
+        }
+
+        return taskList;
     }
 
     private String getTaskStatusMessage(Task task, TaskStatus status) {
